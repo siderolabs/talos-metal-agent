@@ -16,6 +16,8 @@ import (
 	"go.uber.org/zap"
 )
 
+const ipmitoolPath = "/usr/sbin/ipmitool"
+
 // Link to the IPMI spec: https://www.intel.com/content/dam/www/public/us/en/documents/product-briefs/ipmi-second-gen-interface-spec-v2-rev1-1.pdf
 
 // Client is a holder for the IPMIClient.
@@ -26,6 +28,7 @@ type Client struct {
 // NewLocalClient creates a new local ipmi client to use.
 func NewLocalClient() (*Client, error) {
 	conn := &goipmi.Connection{
+		Path:      ipmitoolPath,
 		Interface: "open",
 	}
 
@@ -56,7 +59,7 @@ func (c *Client) AttemptUserSetup(username, password string, logger *zap.Logger)
 
 	maxUsers := summResp.MaxUsers & 0x1F // Only bits [0:5] provide this number
 
-	// Check if sidero user already exists by combing through all userIDs
+	// Check if the user already exists by combing through all userIDs
 	// nb: we start looking at user id 2, because 1 should always be an unamed admin user and
 	//     we don't want to confuse that unnamed admin with an open slot we can take over.
 	exists := false
@@ -75,7 +78,7 @@ func (c *Client) AttemptUserSetup(username, password string, logger *zap.Logger)
 			continue
 		}
 
-		// Found pre-existing sidero user
+		// Found pre-existing user
 		if userRes.Username == username {
 			exists = true
 			userID = i
@@ -93,7 +96,7 @@ func (c *Client) AttemptUserSetup(username, password string, logger *zap.Logger)
 	}
 
 	// User didn't pre-exist and there's no room
-	// Return without sidero user :(
+	// Return without the user :(
 	if userID == 0 {
 		return errors.New("no slot available for user")
 	}
