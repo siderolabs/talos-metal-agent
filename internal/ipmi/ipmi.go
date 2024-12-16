@@ -6,145 +6,130 @@
 package ipmi
 
 import (
-	"encoding/binary"
+	"context"
 	"errors"
 	"fmt"
-	"net"
 	"strings"
+	"time"
 
-	goipmi "github.com/pensando/goipmi"
+	"github.com/bougou/go-ipmi"
 	"go.uber.org/zap"
 )
 
 // Link to the IPMI spec: https://www.intel.com/content/dam/www/public/us/en/documents/product-briefs/ipmi-second-gen-interface-spec-v2-rev1-1.pdf
 
-// Client is a holder for the IPMIClient.
+const channelNumber = uint8(0x01)
+
+// Client is a holder for the ipmiClient.
 type Client struct {
-	IPMIClient *goipmi.Client
+	ipmiClient *ipmi.Client
 }
 
 // NewLocalClient creates a new local ipmi client to use.
-func NewLocalClient() (*Client, error) {
-	conn := &goipmi.Connection{
-		Interface: "open",
-	}
-
-	ipmiClient, err := goipmi.NewClient(conn)
+func NewLocalClient(ctx context.Context) (*Client, error) {
+	ipmiClient, err := ipmi.NewOpenClient()
 	if err != nil {
 		return nil, err
 	}
 
-	if err = ipmiClient.Open(); err != nil {
-		return nil, fmt.Errorf("error opening client: %w", err)
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	if err = ipmiClient.Connect(ctx); err != nil {
+		return nil, err
 	}
 
-	return &Client{IPMIClient: ipmiClient}, nil
+	return &Client{ipmiClient: ipmiClient}, nil
 }
 
 // Close the client.
 func (c *Client) Close() error {
-	return c.IPMIClient.Close()
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	return c.ipmiClient.Close(ctx)
 }
 
 // AttemptUserSetup attempts to set up an IPMI user with the given username.
-func (c *Client) AttemptUserSetup(username, password string, logger *zap.Logger) error {
-	// Get user summary to see how many user slots
-	summResp, err := c.getUserSummary()
+func (c *Client) AttemptUserSetup(ctx context.Context, username, password string, logger *zap.Logger) error {
+	userAccessResponse, err := c.ipmiClient.GetUserAccess(ctx, channelNumber, 0x01)
 	if err != nil {
 		return err
 	}
 
-	maxUsers := summResp.MaxUsers & 0x1F // Only bits [0:5] provide this number
-
-	// Check if sidero user already exists by combing through all userIDs
-	// nb: we start looking at user id 2, because 1 should always be an unamed admin user and
-	//     we don't want to confuse that unnamed admin with an open slot we can take over.
-	exists := false
+	userExists := false
 	userID := uint8(0)
 
-	for i := uint8(2); i <= maxUsers; i++ {
-		userRes, userErr := c.getUserName(i)
-		if userErr != nil {
-			// nb: A failure here actually seems to mean that the user slot is unused,
-			// even though you can also have a slot with empty user as well. *scratches head*
-			// We'll take note of this spot if we haven't already found another empty one.
-			if userID == 0 {
-				userID = i
+	// Start from user ID 2, because 1 is the default admin user
+	for i := uint8(2); i <= userAccessResponse.MaxUsersIDCount; i++ {
+		userRes, userErr := c.ipmiClient.GetUsername(ctx, i)
+		if userErr != nil { // This is an empty slot
+			if userID == 0 { // We haven't found an empty slot yet
+				userID = i // Note this empty slot
 			}
 
 			continue
 		}
 
-		// Found pre-existing sidero user
-		if userRes.Username == username {
-			exists = true
+		if userRes.Username == username { // User already exists
+			userExists = true
 			userID = i
 
 			logger.Info("user already present in slot, we'll claim it as our own", zap.Uint8("slot", i))
 
 			break
-		} else if (userRes.Username == "" || strings.TrimSpace(userRes.Username) == "(Empty User)") && userID == 0 {
-			// If this is the first empty user that's not the UID 1 (which we skip),
-			// we'll take this spot for our user
-			logger.Info("found empty user slot, noting as a possible place for user", zap.Uint8("slot", i))
+		}
 
-			userID = i
+		trimmedUsername := strings.TrimSpace(userRes.Username)
+		isEmptySlot := trimmedUsername == "" || trimmedUsername == "(Empty User)"
+
+		if isEmptySlot && userID == 0 { // This slot is empty, and we haven't found an empty slot yet
+			userID = i // Note this empty slot
 		}
 	}
 
-	// User didn't pre-exist and there's no room
-	// Return without sidero user :(
-	if userID == 0 {
+	if userID == 0 { // No existing user found, and no empty slot available
 		return errors.New("no slot available for user")
 	}
 
-	// Not already present and there's an empty slot so we add the user
-	if !exists {
+	if !userExists { // Add our user to the empty slot
 		logger.Info("adding user to slot", zap.Uint8("slot", userID))
 
-		if _, err = c.setUserName(userID, username); err != nil { //nolint:errcheck
+		if _, err = c.ipmiClient.SetUsername(ctx, userID, username); err != nil {
 			return err
 		}
 	}
 
-	if _, err = c.setUserPass(userID, password); err != nil { //nolint:errcheck
+	if _, err = c.ipmiClient.SetUserPassword(ctx, userID, password, false); err != nil {
 		return err
 	}
 
-	// Make the user an admin
-	// Options: 0x91 == Callin true, Link false, IPMI Msg true, Channel 1
-	// Limits: 0x03 == Administrator
-	// Session: 0x00 No session limit
-	if _, err = c.setUserAccess(0x91, userID, 0x04, 0x00); err != nil { //nolint:errcheck
-		return err
+	if _, err = c.ipmiClient.SetUserAccess(ctx, &ipmi.SetUserAccessRequest{
+		EnableChanging:      true,
+		EnableIPMIMessaging: true,
+		ChannelNumber:       uint8(ipmi.ChannelMediumIPMB),
+		UserID:              userID,
+		MaxPrivLevel:        uint8(ipmi.PrivilegeLevelAdministrator),
+	}); err != nil {
+		return fmt.Errorf("failed to set user access: %w", err)
 	}
 
-	// Enable the user
-	if _, err = c.enableUser(userID); err != nil { //nolint:errcheck
-		return err
+	if err = c.ipmiClient.EnableUser(ctx, userID); err != nil {
+		return fmt.Errorf("failed to enable user: %w", err)
 	}
 
 	return nil
 }
 
 // UserExists checks if a user exists on the BMC.
-func (c *Client) UserExists(username string) (bool, error) {
-	// Get user summary to see how many user slots
-	summResp, err := c.getUserSummary()
+func (c *Client) UserExists(ctx context.Context, username string) (bool, error) {
+	users, err := c.ipmiClient.ListUser(ctx, channelNumber)
 	if err != nil {
 		return false, err
 	}
 
-	maxUsers := summResp.MaxUsers & 0x1F // Only bits [0:5] provide this number
-
-	// Check if the user already exists by combing through all userIDs
-	for i := uint8(1); i <= maxUsers; i++ {
-		userRes, userErr := c.getUserName(i)
-		if userErr != nil {
-			continue
-		}
-
-		if userRes.Username == username {
+	for _, user := range users {
+		if user.Name == username {
 			return true, nil
 		}
 	}
@@ -153,176 +138,19 @@ func (c *Client) UserExists(username string) (bool, error) {
 }
 
 // GetIPPort returns the IPMI IP and port.
-func (c *Client) GetIPPort() (ip string, port uint16, err error) {
-	// Fetch BMC IP (param 3 in LAN config)
-	ipResp, err := c.getLANConfig(0x03)
-	if err != nil {
+func (c *Client) GetIPPort(ctx context.Context) (string, uint16, error) {
+	var (
+		ipParam   ipmi.LanConfigParam_IP
+		portParam ipmi.LanConfigParam_PrimaryRMCPPort
+	)
+
+	if err := c.ipmiClient.GetLanConfigParamFor(ctx, channelNumber, &ipParam); err != nil {
 		return "", 0, err
 	}
 
-	// Fetch BMC Port (param 8 in LAN config)
-	portResp, err := c.getLANConfig(0x08)
-	if err != nil {
+	if err := c.ipmiClient.GetLanConfigParamFor(ctx, channelNumber, &portParam); err != nil {
 		return "", 0, err
 	}
 
-	ip = net.IP(ipResp.Data).String()
-	port = binary.LittleEndian.Uint16(portResp.Data)
-
-	return ip, port, nil
-}
-
-// getLANConfig fetches a given param from the LAN Config. (see 23.2).
-func (c *Client) getLANConfig(param uint8) (*goipmi.LANConfigResponse, error) {
-	req := &goipmi.Request{
-		NetworkFunction: goipmi.NetworkFunctionTransport,
-		Command:         goipmi.CommandGetLANConfig,
-		Data: &goipmi.LANConfigRequest{
-			ChannelNumber: 0x01,
-			Param:         param,
-		},
-	}
-
-	res := &goipmi.LANConfigResponse{}
-
-	err := c.IPMIClient.Send(req, res)
-	if err != nil {
-		return nil, err
-	}
-
-	return res, nil
-}
-
-// getUserSummary returns stats about user table, including max users allowed.
-func (c *Client) getUserSummary() (*goipmi.GetUserSummaryResponse, error) {
-	req := &goipmi.Request{
-		NetworkFunction: goipmi.NetworkFunctionApp,
-		Command:         goipmi.CommandGetUserSummary,
-		Data: &goipmi.GetUserSummaryRequest{
-			ChannelNumber: 0x01,
-			UserID:        0x01,
-		},
-	}
-
-	res := &goipmi.GetUserSummaryResponse{}
-
-	err := c.IPMIClient.Send(req, res)
-	if err != nil {
-		return nil, err
-	}
-
-	return res, nil
-}
-
-// getUserName fetches a un string given a uid. This is how we check if a user slot is available.
-//
-// nb: a "failure" here can actually mean that the slot is just open for use
-// or you can also have a user with "" as the name which won't
-// fail this check and is still open for use.
-// (see 22.29).
-func (c *Client) getUserName(uid byte) (*goipmi.GetUserNameResponse, error) {
-	req := &goipmi.Request{
-		NetworkFunction: goipmi.NetworkFunctionApp,
-		Command:         goipmi.CommandGetUserName,
-		Data: &goipmi.GetUserNameRequest{
-			UserID: uid,
-		},
-	}
-
-	res := &goipmi.GetUserNameResponse{}
-
-	err := c.IPMIClient.Send(req, res)
-	if err != nil {
-		return nil, err
-	}
-
-	return res, nil
-}
-
-// setUserName” sets a string for the given uid (see 22.28).
-func (c *Client) setUserName(uid byte, name string) (*goipmi.SetUserNameResponse, error) {
-	req := &goipmi.Request{
-		NetworkFunction: goipmi.NetworkFunctionApp,
-		Command:         goipmi.CommandSetUserName,
-		Data: &goipmi.SetUserNameRequest{
-			UserID:   uid,
-			Username: name,
-		},
-	}
-
-	res := &goipmi.SetUserNameResponse{}
-
-	err := c.IPMIClient.Send(req, res)
-	if err != nil {
-		return nil, err
-	}
-
-	return res, nil
-}
-
-// setUserPass sets the password for a given uid (see 22.30).
-// nb: This naively assumes you'll pass a 16 char or less pw string.
-//
-//	The goipmi function does not support longer right now.
-func (c *Client) setUserPass(uid byte, pass string) (*goipmi.SetUserPassResponse, error) {
-	req := &goipmi.Request{
-		NetworkFunction: goipmi.NetworkFunctionApp,
-		Command:         goipmi.CommandSetUserPass,
-		Data: &goipmi.SetUserPassRequest{
-			UserID: uid,
-			Pass:   []byte(pass),
-		},
-	}
-
-	res := &goipmi.SetUserPassResponse{}
-
-	err := c.IPMIClient.Send(req, res)
-	if err != nil {
-		return nil, err
-	}
-
-	return res, nil
-}
-
-// setUserAccess tweaks the privileges for a given uid (see 22.26).
-func (c *Client) setUserAccess(options, uid, limits, session byte) (*goipmi.SetUserAccessResponse, error) {
-	req := &goipmi.Request{
-		NetworkFunction: goipmi.NetworkFunctionApp,
-		Command:         goipmi.CommandSetUserAccess,
-		Data: &goipmi.SetUserAccessRequest{
-			AccessOptions:    options,
-			UserID:           uid,
-			UserLimits:       limits,
-			UserSessionLimit: session,
-		},
-	}
-
-	res := &goipmi.SetUserAccessResponse{}
-
-	err := c.IPMIClient.Send(req, res)
-	if err != nil {
-		return nil, err
-	}
-
-	return res, nil
-}
-
-// enableUser sets a user as enabled. Actually the same underlying command as setUserPass (see 22.30).
-func (c *Client) enableUser(uid byte) (*goipmi.EnableUserResponse, error) {
-	req := &goipmi.Request{
-		NetworkFunction: goipmi.NetworkFunctionApp,
-		Command:         goipmi.CommandEnableUser,
-		Data: &goipmi.EnableUserRequest{
-			UserID: uid,
-		},
-	}
-
-	res := &goipmi.EnableUserResponse{}
-
-	err := c.IPMIClient.Send(req, res)
-	if err != nil {
-		return nil, err
-	}
-
-	return res, nil
+	return ipParam.IP.String(), portParam.Port, nil
 }

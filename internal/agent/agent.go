@@ -13,6 +13,7 @@ import (
 
 	"github.com/cosi-project/runtime/pkg/safe"
 	"github.com/cosi-project/runtime/pkg/state"
+	"github.com/fullstorydev/grpchan"
 	"github.com/jhump/grpctunnel"
 	"github.com/jhump/grpctunnel/tunnelpb"
 	"github.com/siderolabs/talos/pkg/grpc/middleware/authz"
@@ -101,22 +102,47 @@ func (a *Agent) Run(ctx context.Context) error {
 	}
 
 	tunnelStub := tunnelpb.NewTunnelServiceClient(providerConn)
-	channelServer := grpctunnel.NewReverseTunnelServer(tunnelStub)
+	reverseTunnelServer := grpctunnel.NewReverseTunnelServer(tunnelStub)
+	loggingReverseTunnelServer := a.loggingServiceRegistrar(reverseTunnelServer)
 
-	ipmiClientFactory := func() (service.IPMIClient, error) {
-		return ipmi.NewLocalClient()
+	ipmiClientFactory := func(ctx context.Context) (service.IPMIClient, error) {
+		client, clientErr := ipmi.NewLocalClient(ctx)
+		if clientErr != nil {
+			return nil, fmt.Errorf("failed to create IPMI client: %w", clientErr)
+		}
+
+		return client, nil
 	}
 
 	serviceServer := service.NewServer(talosClient, ipmiClientFactory, a.testMode, a.logger)
 
-	agentpb.RegisterAgentServiceServer(channelServer, serviceServer)
+	agentpb.RegisterAgentServiceServer(loggingReverseTunnelServer, serviceServer)
 
 	// Open the reverse tunnel and serve requests.
-	if _, err = channelServer.Serve(ctx); err != nil {
+	if _, err = reverseTunnelServer.Serve(ctx); err != nil {
 		return fmt.Errorf("failed to serve over grpc tunnel: %w", err)
 	}
 
 	return nil
+}
+
+func (a *Agent) loggingServiceRegistrar(registrar grpc.ServiceRegistrar) grpc.ServiceRegistrar {
+	return grpchan.WithInterceptor(registrar,
+		func(ctx context.Context, req any, _ *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
+			resp, err := handler(ctx, req)
+			if err != nil {
+				a.logger.Error("unary call failed", zap.Error(err))
+			}
+
+			return resp, err
+		}, func(srv any, ss grpc.ServerStream, _ *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
+			err := handler(srv, ss)
+			if err != nil {
+				a.logger.Error("stream call failed", zap.Error(err))
+			}
+
+			return err
+		})
 }
 
 type talosClientWrapper struct {

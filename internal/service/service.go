@@ -27,20 +27,20 @@ import (
 )
 
 // IPMIClientFactory is the factory to create IPMI clients.
-type IPMIClientFactory func() (IPMIClient, error)
+type IPMIClientFactory func(ctx context.Context) (IPMIClient, error)
 
 // IPMIClient represents an IPMI client.
 type IPMIClient interface {
 	io.Closer
 
 	// UserExists checks if the user exists.
-	UserExists(username string) (bool, error)
+	UserExists(ctx context.Context, username string) (bool, error)
 
 	// AttemptUserSetup attempts to set up the BMC user.
-	AttemptUserSetup(username, password string, logger *zap.Logger) error
+	AttemptUserSetup(ctx context.Context, username, password string, logger *zap.Logger) error
 
 	// GetIPPort returns the BMC IP and port.
-	GetIPPort() (string, uint16, error)
+	GetIPPort(ctx context.Context) (string, uint16, error)
 }
 
 // TalosClient represents a Talos API client.
@@ -92,21 +92,21 @@ func (s *Server) GetPowerManagement(ctx context.Context, req *agentpb.GetPowerMa
 			}, nil
 		}
 
-		ipmiClient, err := s.ipmiClientFactory()
+		ipmiClient, err := s.ipmiClientFactory(ctx)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "error creating ipmi client: %v", err)
 		}
 
 		defer ipmiClient.Close() //nolint:errcheck
 
-		ip, port, err := ipmiClient.GetIPPort()
+		ip, port, err := ipmiClient.GetIPPort(ctx)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "error getting bmc ip port: %v", err)
 		}
 
 		checkUsername := req.GetIpmi().GetCheckUsername()
 
-		exists, err := ipmiClient.UserExists(checkUsername)
+		exists, err := ipmiClient.UserExists(ctx, checkUsername)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "error checking if user %q exists: %v", checkUsername, err)
 		}
@@ -130,14 +130,14 @@ func (s *Server) SetPowerManagement(ctx context.Context, req *agentpb.SetPowerMa
 			return &agentpb.SetPowerManagementResponse{}, nil
 		}
 
-		ipmiClient, err := s.ipmiClientFactory()
+		ipmiClient, err := s.ipmiClientFactory(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("error creating ipmi client: %w", err)
 		}
 
 		defer ipmiClient.Close() //nolint:errcheck
 
-		if err = ipmiClient.AttemptUserSetup(req.GetIpmi().GetUsername(), req.GetIpmi().GetPassword(), s.logger); err != nil {
+		if err = ipmiClient.AttemptUserSetup(ctx, req.GetIpmi().GetUsername(), req.GetIpmi().GetPassword(), s.logger); err != nil {
 			return nil, fmt.Errorf("failed to set up IPMI user: %w", err)
 		}
 
