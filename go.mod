@@ -2,9 +2,13 @@ module github.com/siderolabs/talos-metal-agent
 
 go 1.23.4
 
-replace github.com/pensando/goipmi => github.com/siderolabs/goipmi v0.0.0-20211214143420-35f956689e67
+replace (
+	github.com/bougou/go-ipmi => github.com/utkuozdemir/go-ipmi v0.5.12-0.20241216144512-73a3fe8e6f78
+	github.com/pensando/goipmi => github.com/siderolabs/goipmi v0.0.0-20211214143420-35f956689e67
+)
 
 require (
+	github.com/bougou/go-ipmi v0.5.11
 	github.com/cosi-project/runtime v0.7.6
 	github.com/jhump/grpctunnel v0.3.0
 	github.com/pensando/goipmi v0.0.0-20240603174436-eb122d901c23
@@ -35,6 +39,7 @@ require (
 	github.com/gertd/go-pluralize v0.2.1 // indirect
 	github.com/google/cel-go v0.22.1 // indirect
 	github.com/google/go-cmp v0.6.0 // indirect
+	github.com/google/uuid v1.6.0 // indirect
 	github.com/grpc-ecosystem/go-grpc-middleware/v2 v2.2.0 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.24.0 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
@@ -42,13 +47,19 @@ require (
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/josharian/native v1.1.0 // indirect
 	github.com/jsimonetti/rtnetlink/v2 v2.0.2 // indirect
+	github.com/kr/pretty v0.3.1 // indirect
+	github.com/kr/text v0.2.0 // indirect
+	github.com/mattn/go-runewidth v0.0.15 // indirect
 	github.com/mdlayher/ethtool v0.2.0 // indirect
 	github.com/mdlayher/genetlink v1.3.2 // indirect
 	github.com/mdlayher/netlink v1.7.2 // indirect
 	github.com/mdlayher/socket v0.5.1 // indirect
+	github.com/olekukonko/tablewriter v0.0.5 // indirect
 	github.com/opencontainers/runtime-spec v1.2.0 // indirect
 	github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c // indirect
 	github.com/pkg/errors v0.9.1 // indirect
+	github.com/rivo/uniseg v0.4.7 // indirect
+	github.com/rogpeppe/go-internal v1.13.1 // indirect
 	github.com/ryanuber/go-glob v1.0.0 // indirect
 	github.com/siderolabs/crypto v0.5.1 // indirect
 	github.com/siderolabs/gen v0.7.0 // indirect
