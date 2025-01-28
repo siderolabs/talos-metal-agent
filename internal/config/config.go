@@ -18,6 +18,7 @@ import (
 type Config struct {
 	ProviderAddress string
 	TestMode        bool
+	TLSSkipVerify   bool
 }
 
 // LoadFromKernelCmdline loads the Config from the kernel arguments.
@@ -34,23 +35,31 @@ func LoadFromKernelCmdline(logger *zap.Logger) Config {
 		}
 	}
 
-	var testMode bool
-
-	testModeParam := cmdline.Get(config.TestModeKernelArg)
-	if testModeParam != nil {
-		testModeVal := testModeParam.First()
-		if testModeVal != nil {
-			var err error
-
-			testMode, err = strconv.ParseBool(*testModeVal)
-			if err != nil {
-				logger.Error("failed to parse test mode", zap.String("key", config.TestModeKernelArg), zap.String("value", *testModeVal), zap.Error(err))
-			}
-		}
-	}
+	testMode := parseBooleanFlag(cmdline, config.TestModeKernelArg, logger)
+	tlsSkipVerify := parseBooleanFlag(cmdline, config.TLSSkipVerifyKernelArg, logger)
 
 	return Config{
 		ProviderAddress: providerAddress,
 		TestMode:        testMode,
+		TLSSkipVerify:   tlsSkipVerify,
 	}
+}
+
+func parseBooleanFlag(cmdline *procfs.Cmdline, key string, logger *zap.Logger) bool {
+	var val bool
+
+	param := cmdline.Get(key)
+	if param != nil {
+		testModeVal := param.First()
+		if testModeVal != nil {
+			var err error
+
+			val, err = strconv.ParseBool(*testModeVal)
+			if err != nil {
+				logger.Error("failed to parse bool arg", zap.String("key", key), zap.String("value", *testModeVal), zap.Error(err))
+			}
+		}
+	}
+
+	return val
 }

@@ -58,12 +58,12 @@ var rootCmd = &cobra.Command{
 
 		defer logger.Sync() //nolint:errcheck
 
-		return run(cmd.Context(), conf.ProviderAddress, conf.TestMode, logger)
+		return run(cmd.Context(), conf.ProviderAddress, conf.TestMode, conf.TLSSkipVerify, logger)
 	},
 }
 
-func run(ctx context.Context, providerAddress string, testMode bool, logger *zap.Logger) error {
-	ag, err := agent.New(providerAddress, testMode, logger)
+func run(ctx context.Context, providerAddress string, testMode, tlsSkipVerify bool, logger *zap.Logger) error {
+	ag, err := agent.New(providerAddress, testMode, tlsSkipVerify, logger)
 	if err != nil {
 		return fmt.Errorf("failed to create agent: %w", err)
 	}

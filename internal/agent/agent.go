@@ -7,7 +7,9 @@ package agent
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
+	"net/url"
 
 	"github.com/cosi-project/runtime/pkg/safe"
 	"github.com/cosi-project/runtime/pkg/state"
@@ -20,6 +22,7 @@ import (
 	talosrole "github.com/siderolabs/talos/pkg/machinery/role"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
 
@@ -34,12 +37,14 @@ type Agent struct {
 	logger          *zap.Logger
 	providerAddress string
 	testMode        bool
+	tlsSkipVerify   bool
 }
 
 // New creates a new agent.
-func New(providerAddress string, testMode bool, logger *zap.Logger) (*Agent, error) {
+func New(providerAddress string, testMode bool, tlsSkipVerify bool, logger *zap.Logger) (*Agent, error) {
 	return &Agent{
 		providerAddress: providerAddress,
+		tlsSkipVerify:   tlsSkipVerify,
 		testMode:        testMode,
 		logger:          logger,
 	}, nil
@@ -47,7 +52,7 @@ func New(providerAddress string, testMode bool, logger *zap.Logger) (*Agent, err
 
 // Run starts the agent.
 func (a *Agent) Run(ctx context.Context) error {
-	a.logger.Info("running metal agent", zap.String("provider_address", a.providerAddress), zap.Bool("test_mode", a.testMode))
+	a.logger.Info("running metal agent", zap.String("provider_address", a.providerAddress), zap.Bool("test_mode", a.testMode), zap.Bool("tls_skip_verify", a.tlsSkipVerify))
 
 	talosClient, err := buildTalosClient(ctx)
 	if err != nil {
@@ -68,13 +73,29 @@ func (a *Agent) Run(ctx context.Context) error {
 
 	a.logger.Info("connected to Talos", zap.String("version", versionResponse.Messages[0].String()), zap.String("machine_uuid", machineID))
 
+	providerAddressURL, err := url.Parse(a.providerAddress)
+	useTLS := err == nil && providerAddressURL.Scheme == "https"
+
+	providerAddress := a.providerAddress
+	if providerAddressURL != nil {
+		providerAddress = providerAddressURL.Host
+	}
+
+	var transportCredentials credentials.TransportCredentials
+
+	if useTLS {
+		transportCredentials = credentials.NewTLS(&tls.Config{InsecureSkipVerify: a.tlsSkipVerify})
+	} else {
+		transportCredentials = insecure.NewCredentials()
+	}
+
 	providerDialOptions := []grpc.DialOption{
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithTransportCredentials(transportCredentials),
 		grpc.WithUnaryInterceptor(idHeaderUnaryInterceptor(machineID)),
 		grpc.WithStreamInterceptor(idHeaderStreamInterceptor(machineID)),
 	}
 
-	providerConn, err := grpc.NewClient(a.providerAddress, providerDialOptions...)
+	providerConn, err := grpc.NewClient(providerAddress, providerDialOptions...)
 	if err != nil {
 		return fmt.Errorf("failed to create grpc client: %w", err)
 	}

@@ -11,4 +11,7 @@ const (
 
 	// TestModeKernelArg is the kernel argument that contains the test mode flag.
 	TestModeKernelArg = "metal.provider.test.mode"
+
+	// TLSSkipVerifyKernelArg is the kernel argument to disable TLS verification in TLS connection to the metal provider.
+	TLSSkipVerifyKernelArg = "metal.provider.tls.skip.verify"
 )
