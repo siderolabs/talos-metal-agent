@@ -1,6 +1,6 @@
 module github.com/siderolabs/talos-metal-agent
 
-go 1.23.5
+go 1.23.6
 
 require (
 	github.com/bougou/go-ipmi v0.7.2
