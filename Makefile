@@ -1,6 +1,6 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2025-02-10T19:04:00Z by kres 5e9dc91.
+# Generated on 2025-05-23T12:38:11Z by kres 9f64b0d.
 
 # common variables
 
@@ -17,19 +17,21 @@ WITH_RACE ?= false
 REGISTRY ?= ghcr.io
 USERNAME ?= siderolabs
 REGISTRY_AND_USERNAME ?= $(REGISTRY)/$(USERNAME)
-PROTOBUF_GO_VERSION ?= 1.36.2
+PROTOBUF_GO_VERSION ?= 1.36.6
 GRPC_GO_VERSION ?= 1.5.1
-GRPC_GATEWAY_VERSION ?= 2.25.1
+GRPC_GATEWAY_VERSION ?= 2.26.3
 VTPROTOBUF_VERSION ?= 0.6.0
-GOIMPORTS_VERSION ?= 0.29.0
+GOIMPORTS_VERSION ?= 0.33.0
+GOMOCK_VERSION ?= 0.5.2
 DEEPCOPY_VERSION ?= v0.5.6
-GOLANGCILINT_VERSION ?= v1.63.4
-GOFUMPT_VERSION ?= v0.7.0
-GO_VERSION ?= 1.23.6
+GOLANGCILINT_VERSION ?= v2.1.6
+GOFUMPT_VERSION ?= v0.8.0
+GO_VERSION ?= 1.24.3
 GO_BUILDFLAGS ?=
 GO_LDFLAGS ?=
 CGO_ENABLED ?= 0
 GOTOOLCHAIN ?= local
+GOEXPERIMENT ?= synctest
 TESTPKGS ?= ./...
 KRES_IMAGE ?= ghcr.io/siderolabs/kres:latest
 CONFORMANCE_IMAGE ?= ghcr.io/siderolabs/conform:latest
@@ -65,11 +67,12 @@ COMMON_ARGS += --build-arg=GRPC_GO_VERSION="$(GRPC_GO_VERSION)"
 COMMON_ARGS += --build-arg=GRPC_GATEWAY_VERSION="$(GRPC_GATEWAY_VERSION)"
 COMMON_ARGS += --build-arg=VTPROTOBUF_VERSION="$(VTPROTOBUF_VERSION)"
 COMMON_ARGS += --build-arg=GOIMPORTS_VERSION="$(GOIMPORTS_VERSION)"
+COMMON_ARGS += --build-arg=GOMOCK_VERSION="$(GOMOCK_VERSION)"
 COMMON_ARGS += --build-arg=DEEPCOPY_VERSION="$(DEEPCOPY_VERSION)"
 COMMON_ARGS += --build-arg=GOLANGCILINT_VERSION="$(GOLANGCILINT_VERSION)"
 COMMON_ARGS += --build-arg=GOFUMPT_VERSION="$(GOFUMPT_VERSION)"
 COMMON_ARGS += --build-arg=TESTPKGS="$(TESTPKGS)"
-TOOLCHAIN ?= docker.io/golang:1.23-alpine
+TOOLCHAIN ?= docker.io/golang:1.24-alpine
 
 # extra variables
 
@@ -78,7 +81,7 @@ EXTENSIONS_REF ?= 8a17f71183c1b6f5347f7fdadfee077209ede48e
 EXTENSIONS_PATH ?= guest-agents/metal-agent
 EXTENSION_DIGESTS_IMAGE ?= ghcr.io/siderolabs/extensions
 IMAGER_REGISTRY_AND_USERNAME ?= ghcr.io/siderolabs
-IMAGER_TAG ?= v1.9.3
+IMAGER_TAG ?= v1.9.6
 PUSH_TAG ?=
 OUTPUT_REGISTRY_AND_USERNAME ?= ghcr.io/siderolabs
 TEMP_REGISTRY ?= 127.0.0.1:5005
@@ -145,7 +148,7 @@ else
 GO_LDFLAGS += -s
 endif
 
-all: unit-tests talos-metal-agent image-talos-metal-agent image-boot-assets push-boot-assets lint
+all: unit-tests talos-metal-agent image-talos-metal-agent lint
 
 $(ARTIFACTS):  ## Creates artifacts directory.
 	@mkdir -p $(ARTIFACTS)

@@ -66,7 +66,7 @@ spec:
       - name: IMAGER_TAG
         # this must point to a commit where Talos agent mode logic was introduced,
         # i.e., not older than https://github.com/siderolabs/talos/commit/2136358d65ddf6ad040ed62c835b335f99a59399
-        defaultValue: v1.9.3
+        defaultValue: v1.9.6
       - name: PUSH_TAG
         defaultValue: "" # if specified, needs to be a semver tag for the extension validation to not fail
       - name: OUTPUT_REGISTRY_AND_USERNAME
@@ -92,7 +92,7 @@ spec:
         hack/boot-assets/push.sh
     variables: # MAKE SURE to have the same values in the image-boot-assets step as well
       - name: IMAGER_TAG
-        defaultValue: v1.9.3 # point to the same one above
+        defaultValue: v1.9.6 # point to the same one above
       - name: PUSH_TAG
         defaultValue: "" # point to the same one above
       - name: OUTPUT_REGISTRY_AND_USERNAME
