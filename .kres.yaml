@@ -56,7 +56,7 @@ spec:
       - name: EXTENSIONS_REPO
         defaultValue: https://github.com/siderolabs/extensions.git
       - name: EXTENSIONS_REF
-        defaultValue: 8a17f71183c1b6f5347f7fdadfee077209ede48e # includes https://github.com/siderolabs/extensions/pull/601, todo: bump to the next tag when available
+        defaultValue: 30eb717bb6ed4e546a1e794414d8e409778880cf # includes https://github.com/siderolabs/extensions/pull/709, todo: bump to the next tag when available
       - name: EXTENSIONS_PATH
         defaultValue: guest-agents/metal-agent
       - name: EXTENSION_DIGESTS_IMAGE
