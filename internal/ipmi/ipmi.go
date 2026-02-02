@@ -20,13 +20,32 @@ import (
 
 const channelNumber = uint8(0x01)
 
+// Provider is an interface for the IPMI client operations used by this package.
+type Provider interface {
+	Close(ctx context.Context) error
+	GetUserAccess(ctx context.Context, channelNumber uint8, userID uint8) (*ipmi.GetUserAccessResponse, error)
+	GetUsername(ctx context.Context, userID uint8) (*ipmi.GetUsernameResponse, error)
+	SetUsername(ctx context.Context, userID uint8, username string) (*ipmi.SetUsernameResponse, error)
+	SetUserPassword(ctx context.Context, userID uint8, password string, test bool) (*ipmi.SetUserPasswordResponse, error)
+	SetUserAccess(ctx context.Context, req *ipmi.SetUserAccessRequest) (*ipmi.SetUserAccessResponse, error)
+	EnableUser(ctx context.Context, userID uint8) error
+	GetUsers(ctx context.Context, channelNumber uint8) ([]*ipmi.User, error)
+	GetLanConfigParamFor(ctx context.Context, channelNumber uint8, param ipmi.LanConfigParameter) error
+}
+
 // Client is a holder for the ipmiClient.
 type Client struct {
-	ipmiClient *ipmi.Client
+	ipmiClient Provider
+	logger     *zap.Logger
+}
+
+// NewClient creates a new Client with the given Provider and logger.
+func NewClient(ipmiClient Provider, logger *zap.Logger) *Client {
+	return &Client{ipmiClient: ipmiClient, logger: logger}
 }
 
 // NewLocalClient creates a new local ipmi client to use.
-func NewLocalClient(ctx context.Context) (*Client, error) {
+func NewLocalClient(ctx context.Context, logger *zap.Logger) (*Client, error) {
 	ipmiClient, err := ipmi.NewOpenClient()
 	if err != nil {
 		return nil, err
@@ -39,7 +58,7 @@ func NewLocalClient(ctx context.Context) (*Client, error) {
 		return nil, err
 	}
 
-	return &Client{ipmiClient: ipmiClient}, nil
+	return NewClient(ipmiClient, logger), nil
 }
 
 // Close the client.
@@ -149,7 +168,13 @@ func (c *Client) GetIPPort(ctx context.Context) (string, uint16, error) {
 	}
 
 	if err := c.ipmiClient.GetLanConfigParamFor(ctx, channelNumber, &portParam); err != nil {
-		return "", 0, err
+		c.logger.Warn("failed to get IPMI port", zap.Error(err))
+	}
+
+	if portParam.Port == 0 {
+		c.logger.Info("defaulting IPMI port to 623")
+
+		portParam.Port = 623
 	}
 
 	return ipParam.IP.String(), portParam.Port, nil

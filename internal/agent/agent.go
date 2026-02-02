@@ -106,7 +106,7 @@ func (a *Agent) Run(ctx context.Context) error {
 	loggingReverseTunnelServer := a.loggingServiceRegistrar(reverseTunnelServer)
 
 	ipmiClientFactory := func(ctx context.Context) (service.IPMIClient, error) {
-		client, clientErr := ipmi.NewLocalClient(ctx)
+		client, clientErr := ipmi.NewLocalClient(ctx, a.logger)
 		if clientErr != nil {
 			return nil, fmt.Errorf("failed to create IPMI client: %w", clientErr)
 		}
