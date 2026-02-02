@@ -123,7 +123,7 @@ func (c *Client) AttemptUserSetup(ctx context.Context, username, password string
 
 // UserExists checks if a user exists on the BMC.
 func (c *Client) UserExists(ctx context.Context, username string) (bool, error) {
-	users, err := c.ipmiClient.ListUser(ctx, channelNumber)
+	users, err := c.ipmiClient.GetUsers(ctx, channelNumber)
 	if err != nil {
 		return false, err
 	}
