@@ -1,6 +1,6 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2026-02-02T10:27:47Z by kres dc032d7.
+# Generated on 2026-02-04T12:00:23Z by kres dc032d7.
 
 # common variables
 
@@ -81,11 +81,11 @@ TOOLCHAIN ?= docker.io/golang:1.25-alpine
 # extra variables
 
 EXTENSIONS_REPO ?= https://github.com/siderolabs/extensions.git
-EXTENSIONS_REF ?= 30eb717bb6ed4e546a1e794414d8e409778880cf
+EXTENSIONS_REF ?= f8642756389925f428502feea3e6467d15ae2c5b
 EXTENSIONS_PATH ?= guest-agents/metal-agent
 EXTENSION_DIGESTS_IMAGE ?= ghcr.io/siderolabs/extensions
 IMAGER_REGISTRY_AND_USERNAME ?= ghcr.io/siderolabs
-IMAGER_TAG ?= v1.9.6
+IMAGER_TAG ?= v1.12.2
 PUSH_TAG ?=
 OUTPUT_REGISTRY_AND_USERNAME ?= ghcr.io/siderolabs
 TEMP_REGISTRY ?= 127.0.0.1:5005

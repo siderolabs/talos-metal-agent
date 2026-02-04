@@ -2,7 +2,7 @@
 
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2026-02-02T10:33:24Z by kres dc032d7.
+# Generated on 2026-02-04T12:00:23Z by kres dc032d7.
 
 ARG TOOLCHAIN=scratch
 
@@ -11,6 +11,7 @@ FROM docker.io/oven/bun:1.3.6-alpine AS lint-markdown
 WORKDIR /src
 RUN bun i markdownlint-cli@0.47.0 sentences-per-line@0.5.0
 COPY .markdownlint.json .
+COPY ./CHANGELOG.md ./CHANGELOG.md
 COPY ./README.md ./README.md
 RUN bunx markdownlint --ignore "CHANGELOG.md" --ignore "**/node_modules/**" --ignore '**/hack/chglog/**' --rules markdownlint-sentences-per-line .
 
