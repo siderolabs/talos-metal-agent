@@ -7,10 +7,10 @@ require (
 	github.com/cosi-project/runtime v1.13.0
 	github.com/fullstorydev/grpchan v1.1.2
 	github.com/jhump/grpctunnel v0.3.0
-	github.com/planetscale/vtprotobuf v0.6.1-0.20241121165744-79df5c4772f2
+	github.com/planetscale/vtprotobuf v0.6.1-0.20250313105119-ba97887b0a25
 	github.com/siderolabs/go-procfs v0.1.2
-	github.com/siderolabs/talos v1.12.2
-	github.com/siderolabs/talos/pkg/machinery v1.12.2
+	github.com/siderolabs/talos v1.12.3
+	github.com/siderolabs/talos/pkg/machinery v1.12.3
 	github.com/spf13/cobra v1.10.2
 	github.com/stretchr/testify v1.11.1
 	go.uber.org/zap v1.27.1
