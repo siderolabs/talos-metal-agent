@@ -105,7 +105,8 @@ func runCmd() error {
 
 func init() {
 	rootCmd.Flags().StringVar(&rootCmdArgs.providerAddress, "provider-address", "", fmt.Sprintf(
-		"The infra provider address to connect to. If not specified explicitly, the value of the kernel arg %q will be used.", config.MetalProviderAddressKernelArg))
+		"The infra provider address to connect to. If not specified explicitly, the value of the kernel arg %q will be used.", config.MetalProviderAddressKernelArg,
+	))
 	rootCmd.Flags().BoolVar(&rootCmdArgs.testMode, testModeFlag, false, "Enable test mode. In this mode, "+
 		"the agent will assume that the power management is done via an external API (e.g., the power API served by 'talosctl cluster create').")
 	rootCmd.Flags().BoolVar(&rootCmdArgs.debug, "debug", false, "Enable debug mode & logs.")
