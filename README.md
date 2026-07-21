@@ -2,8 +2,8 @@
 
 This repository contains the metal agent extension for Talos.
 
-This repository builds only the agent binary itself - it gets packaged into an extension
-along with its dependencies (e.g., `ipmitool`) in the [extensions repository](https://github.com/siderolabs/extensions/tree/main/guest-agents/metal-agent).
+This repository builds the agent binary and its container image - the binary gets packaged into an extension
+in the [extensions repository](https://github.com/siderolabs/extensions/tree/main/guest-agents/metal-agent).
 
 ## Development
 
