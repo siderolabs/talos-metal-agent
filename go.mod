@@ -3,20 +3,20 @@ module github.com/siderolabs/talos-metal-agent
 go 1.26.5
 
 require (
-	github.com/bougou/go-ipmi v0.8.3
-	github.com/cosi-project/runtime v1.16.2
+	github.com/bougou/go-ipmi v0.9.1
+	github.com/cosi-project/runtime v1.16.3
 	github.com/fullstorydev/grpchan v1.1.2
 	github.com/jhump/grpctunnel v0.3.0
-	github.com/planetscale/vtprotobuf v0.6.1-0.20250313105119-ba97887b0a25
+	github.com/planetscale/vtprotobuf 8ae5a48058df
 	github.com/siderolabs/go-procfs v0.1.2
-	github.com/siderolabs/talos v1.13.6
-	github.com/siderolabs/talos/pkg/machinery v1.13.6
+	github.com/siderolabs/talos v1.14.0
+	github.com/siderolabs/talos/pkg/machinery v1.14.0
 	github.com/spf13/cobra v1.10.2
-	github.com/stretchr/testify v1.11.1
+	github.com/stretchr/testify v1.12.1
 	go.uber.org/zap v1.28.0
 	golang.org/x/sync v0.22.0
 	google.golang.org/grpc v1.82.1
-	google.golang.org/protobuf v1.36.12-0.20260120151049-f2248ac996af
+	google.golang.org/protobuf v1.36.12
 )
 
 require (
