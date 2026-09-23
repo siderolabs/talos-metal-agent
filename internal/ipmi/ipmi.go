@@ -12,7 +12,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/bougou/go-ipmi"
+	"github.com/bougou/go-ipmi/pkg/client"
+	"github.com/bougou/go-ipmi/pkg/command/app"
+	"github.com/bougou/go-ipmi/pkg/types"
 	"go.uber.org/zap"
 )
 
@@ -23,14 +25,14 @@ const channelNumber = uint8(0x01)
 // Provider is an interface for the IPMI client operations used by this package.
 type Provider interface {
 	Close(ctx context.Context) error
-	GetUserAccess(ctx context.Context, channelNumber uint8, userID uint8) (*ipmi.GetUserAccessResponse, error)
-	GetUsername(ctx context.Context, userID uint8) (*ipmi.GetUsernameResponse, error)
-	SetUsername(ctx context.Context, userID uint8, username string) (*ipmi.SetUsernameResponse, error)
-	SetUserPassword(ctx context.Context, userID uint8, password string, test bool) (*ipmi.SetUserPasswordResponse, error)
-	SetUserAccess(ctx context.Context, req *ipmi.SetUserAccessRequest) (*ipmi.SetUserAccessResponse, error)
+	GetUserAccess(ctx context.Context, channelNumber uint8, userID uint8) (*app.GetUserAccessResponse, error)
+	GetUsername(ctx context.Context, userID uint8) (*app.GetUsernameResponse, error)
+	SetUsername(ctx context.Context, userID uint8, username string) (*app.SetUsernameResponse, error)
+	SetUserPassword(ctx context.Context, userID uint8, password string, test bool) (*app.SetUserPasswordResponse, error)
+	SetUserAccess(ctx context.Context, req *app.SetUserAccessRequest) (*app.SetUserAccessResponse, error)
 	EnableUser(ctx context.Context, userID uint8) error
-	GetUsers(ctx context.Context, channelNumber uint8) ([]*ipmi.User, error)
-	GetLanConfigParamFor(ctx context.Context, channelNumber uint8, param ipmi.LanConfigParameter) error
+	GetUsers(ctx context.Context, channelNumber uint8) ([]*app.User, error)
+	GetLanConfigParamFor(ctx context.Context, channelNumber uint8, param types.LanConfigParameter) error
 }
 
 // Client is a holder for the ipmiClient.
@@ -46,7 +48,7 @@ func NewClient(ipmiClient Provider, logger *zap.Logger) *Client {
 
 // NewLocalClient creates a new local ipmi client to use.
 func NewLocalClient(ctx context.Context, logger *zap.Logger) (*Client, error) {
-	ipmiClient, err := ipmi.NewOpenClient()
+	ipmiClient, err := client.NewOpenClient()
 	if err != nil {
 		return nil, err
 	}
@@ -123,12 +125,12 @@ func (c *Client) AttemptUserSetup(ctx context.Context, username, password string
 		return err
 	}
 
-	if _, err = c.ipmiClient.SetUserAccess(ctx, &ipmi.SetUserAccessRequest{
+	if _, err = c.ipmiClient.SetUserAccess(ctx, &app.SetUserAccessRequest{
 		EnableChanging:      true,
 		EnableIPMIMessaging: true,
-		ChannelNumber:       uint8(ipmi.ChannelMediumIPMB),
+		ChannelNumber:       uint8(types.ChannelMediumIPMB),
 		UserID:              userID,
-		MaxPrivLevel:        uint8(ipmi.PrivilegeLevelAdministrator),
+		MaxPrivLevel:        uint8(types.PrivilegeLevelAdministrator),
 	}); err != nil {
 		return fmt.Errorf("failed to set user access: %w", err)
 	}
@@ -159,8 +161,8 @@ func (c *Client) UserExists(ctx context.Context, username string) (bool, error) 
 // GetIPPort returns the IPMI IP and port.
 func (c *Client) GetIPPort(ctx context.Context) (string, uint16, error) {
 	var (
-		ipParam   ipmi.LanConfigParam_IP
-		portParam ipmi.LanConfigParam_PrimaryRMCPPort
+		ipParam   types.LanConfigParam_IP
+		portParam types.LanConfigParam_PrimaryRMCPPort
 	)
 
 	if err := c.ipmiClient.GetLanConfigParamFor(ctx, channelNumber, &ipParam); err != nil {

@@ -1,9 +1,9 @@
 module github.com/siderolabs/talos-metal-agent
 
-go 1.26.5
+go 1.27.1
 
 require (
-	github.com/bougou/go-ipmi v0.8.3
+	github.com/bougou/go-ipmi v0.9.1
 	github.com/cosi-project/runtime v1.16.3
 	github.com/fullstorydev/grpchan v1.1.2
 	github.com/jhump/grpctunnel v0.3.0
@@ -14,8 +14,8 @@ require (
 	github.com/spf13/cobra v1.10.2
 	github.com/stretchr/testify v1.12.1
 	go.uber.org/zap v1.28.0
-	golang.org/x/sync v0.22.0
-	google.golang.org/grpc v1.83.2
+	golang.org/x/sync v0.23.0
+	google.golang.org/grpc v1.84.0
 	google.golang.org/protobuf v1.36.12
 )
 
@@ -36,6 +36,7 @@ require (
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/fatih/color v1.19.0 // indirect
 	github.com/gertd/go-pluralize v0.2.1 // indirect
+	github.com/go-ole/go-ole v1.3.0 // indirect
 	github.com/google/cel-go v0.31.0 // indirect
 	github.com/google/go-cmp v0.7.0 // indirect
 	github.com/google/uuid v1.6.0 // indirect
