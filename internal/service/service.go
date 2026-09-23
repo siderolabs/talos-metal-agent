@@ -14,6 +14,7 @@ import (
 
 	"github.com/cosi-project/runtime/pkg/safe"
 	"github.com/cosi-project/runtime/pkg/state"
+	"github.com/siderolabs/talos/pkg/machinery/api/machine"
 	"github.com/siderolabs/talos/pkg/machinery/api/storage"
 	talosclient "github.com/siderolabs/talos/pkg/machinery/client"
 	"github.com/siderolabs/talos/pkg/machinery/resources/block"
@@ -48,6 +49,7 @@ type TalosClient interface {
 	Reboot(ctx context.Context, opts ...talosclient.RebootMode) error
 	State() state.State
 	BlockDeviceWipe(ctx context.Context, req *storage.BlockDeviceWipeRequest, callOptions ...grpc.CallOption) error
+	MDDestroy(ctx context.Context, req *machine.MDDestroyRequest, callOptions ...grpc.CallOption) error
 }
 
 // Server is the agent service server.
@@ -168,6 +170,8 @@ func (s *Server) WipeDisks(ctx context.Context, req *agentpb.WipeDisksRequest) (
 			method = storage.BlockDeviceWipeDescriptor_ZEROES
 		}
 
+		s.destroyMDArrays(ctx)
+
 		diskList, err := safe.StateListAll[*block.Disk](ctx, s.talosClient.State())
 		if err != nil {
 			return nil, fmt.Errorf("failed to list disks: %w", err)
@@ -199,6 +203,38 @@ func (s *Server) WipeDisks(ctx context.Context, req *agentpb.WipeDisksRequest) (
 
 		return &agentpb.WipeDisksResponse{}, nil
 	})
+}
+
+// mdMajor is the block device major number of MD (software RAID) arrays.
+const mdMajor = 9
+
+// destroyMDArrays stops every MD array and clears the superblocks of its members.
+//
+// Talos assembles the arrays it finds on the disks at boot, and it refuses to wipe a disk that is a member of an array.
+// Arrays are looked up among the block devices rather than the disks, because an incomplete array is not a disk, but still holds its members.
+//
+// Failures are only logged: if an array that could not be destroyed still holds a disk, wiping that disk fails.
+func (s *Server) destroyMDArrays(ctx context.Context) {
+	deviceList, err := safe.StateListAll[*block.Device](ctx, s.talosClient.State())
+	if err != nil {
+		s.logger.Warn("failed to list block devices", zap.Error(err))
+
+		return
+	}
+
+	for device := range deviceList.All() {
+		if device.TypedSpec().Major != mdMajor {
+			continue
+		}
+
+		s.logger.Info("destroy md array", zap.String("device", device.Metadata().ID()))
+
+		if err = s.talosClient.MDDestroy(ctx, &machine.MDDestroyRequest{
+			Device: "/dev/" + device.Metadata().ID(),
+		}); err != nil {
+			s.logger.Warn("failed to destroy md array", zap.String("device", device.Metadata().ID()), zap.Error(err))
+		}
+	}
 }
 
 type marshaler interface {
