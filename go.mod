@@ -4,25 +4,25 @@ go 1.27.1
 
 require (
 	github.com/bougou/go-ipmi v0.9.1
-	github.com/cosi-project/runtime v1.16.3
+	github.com/cosi-project/runtime v1.16.4
 	github.com/fullstorydev/grpchan v1.1.2
-	github.com/jhump/grpctunnel v0.3.0
+	github.com/jhump/grpctunnel v0.4.0
 	github.com/planetscale/vtprotobuf v0.6.1-0.20260702190614-8ae5a48058df
 	github.com/siderolabs/go-procfs v0.1.2
-	github.com/siderolabs/talos v1.14.1
-	github.com/siderolabs/talos/pkg/machinery v1.14.1
+	github.com/siderolabs/talos v1.14.5
+	github.com/siderolabs/talos/pkg/machinery v1.14.5
 	github.com/spf13/cobra v1.10.2
 	github.com/stretchr/testify v1.12.1
 	go.uber.org/zap v1.28.0
-	golang.org/x/sync v0.23.0
-	google.golang.org/grpc v1.84.0
+	golang.org/x/sync v0.24.0
+	google.golang.org/grpc v1.85.0
 	google.golang.org/protobuf v1.36.12
 )
 
 require (
-	cel.dev/expr v0.25.2 // indirect
-	github.com/ProtonMail/go-crypto v1.4.1 // indirect
-	github.com/ProtonMail/gopenpgp/v3 v3.4.1 // indirect
+	cel.dev/expr v0.25.3 // indirect
+	github.com/ProtonMail/go-crypto v1.5.2 // indirect
+	github.com/ProtonMail/gopenpgp/v3 v3.5.2 // indirect
 	github.com/adrg/xdg v0.5.3 // indirect
 	github.com/antlr4-go/antlr/v4 v4.13.1 // indirect
 	github.com/blang/semver/v4 v4.0.0 // indirect
@@ -41,7 +41,7 @@ require (
 	github.com/google/go-cmp v0.7.0 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/grpc-ecosystem/go-grpc-middleware/v2 v2.3.3 // indirect
-	github.com/grpc-ecosystem/grpc-gateway/v2 v2.30.0 // indirect
+	github.com/grpc-ecosystem/grpc-gateway/v2 v2.33.0 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
@@ -78,13 +78,13 @@ require (
 	go.uber.org/multierr v1.11.0 // indirect
 	go.yaml.in/yaml/v3 v3.0.5 // indirect
 	go.yaml.in/yaml/v4 v4.0.0-rc.6 // indirect
-	golang.org/x/crypto v0.55.0 // indirect
-	golang.org/x/exp v0.0.0-20260709172345-9ea1abe57597 // indirect
-	golang.org/x/net v0.58.0 // indirect
-	golang.org/x/sys v0.47.0 // indirect
-	golang.org/x/term v0.45.0 // indirect
-	golang.org/x/text v0.41.0 // indirect
-	golang.org/x/time v0.15.0 // indirect
-	google.golang.org/genproto/googleapis/api v0.0.0-20260810153831-ec0a7760b754 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20260810153831-ec0a7760b754 // indirect
+	golang.org/x/crypto v0.58.0 // indirect
+	golang.org/x/exp v0.0.0-20261014143641-f0251eb4aa3e // indirect
+	golang.org/x/net v0.61.0 // indirect
+	golang.org/x/sys v0.49.0 // indirect
+	golang.org/x/term v0.47.0 // indirect
+	golang.org/x/text v0.43.0 // indirect
+	golang.org/x/time v0.16.0 // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20261026165753-2ffab32bce7e // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20261019180522-ce908d29299b // indirect
 )
